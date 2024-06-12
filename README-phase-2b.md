@@ -29,5 +29,5 @@ in profiles.yml.
 
 5. Analyze the performance and scalability of execution times of each model. Visualize and discucss the final results.
 
-
+Zwiększenie liczby egzekutorów może znacząco skrócić czas potrzebny na wykonanie zadań. Warto jednak zaznaczyć, że zmniejszenie czasu nie jest proporcjonalne do liczby dodanych egzekutorów, co jest spodziewanym rezultatem. Największe korzyści z większej liczby egzekutorów są widoczne przy najdłuższych zadaniach. W przypadku krótszych zadań, poprawa czasu wykonania jest niewielka lub wręcz zaniedbywalnie mała.
    
