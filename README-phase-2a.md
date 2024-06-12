@@ -76,20 +76,86 @@ the running instance of your Vertex AI Workbench
 
 
 7. Explore files created by generator and describe them, including format, content, total size.
+    
+   Zostały wygenerowane foldery "Batch1", "Batch2", "Batch3" zawierające dane w formatach tekstowych (rozszerzenia .txt, .csv oraz brak rozszerzenia).
+   "Batch1" jest największy z nich (9.4G), "Batch2" i "Batch3" mają ten sam rozmiar (112M).
+   
+   Pliki w formatach .txt oraz bez formatu zawierają dane z tablic baz danych i każdemu z nich odpowiada plik z formatem .csv
+   który ma nazwę [nazwa oryginalnego pliku]_audit.csv zawierające informacje o kolumnach tych tablic.
 
-   ***Files desccription***
+   Oprócz tego na poziomie folderów "Batch[1-3]" zostały wygenerowane pliki:
+   * Batch[1-3]_audit.csv - zawieraja początkową i końcową daty dla danych z odpowiadającego podfolderu
+   * Generator_audit.csv - zawiera wartości atrybutów generatora
+   * digen_report.txt - krótki raport generacji, zawiera datę i czas rozpoczęcia i zakończenia procesu generacji, liczność wygenerowanych
+     danych w każdym podfolderze, wykorzystane opcje komady wywołania, etc.
 
 8. Analyze tpcdi.py. What happened in the loading stage?
 
-   ***Your answer***
+   W pliku `tpcdi.py` wykonywane są następujące kroki:
+
+   1. **Inicjalizacja sesji i bazy danych**:
+      - Tworzenie nowej sesji.
+      - Tworzenie bazy danych, która będzie zawierała dane do dalszego przetwarzania.
+
+      2. **Definiowanie schematu tabeli**:
+         - Dla każdego przetwarzanego pliku definiowany jest odpowiedni schemat tabeli.
+
+      3. **Ładowanie danych**:
+         - Używanie zdefiniowanego schematu tabeli do załadowania danych z plików (txt i bez rozszerzenia) do odpowiednich tabel w bazie danych.
+
+      4. **Przetwarzanie danych**:
+         - Wykonywanie zapytań SQL na załadowanych tabelach w celu przetworzenia danych i stworzenia tabel wynikowych.
+
+      5. **Zapisywanie wyników**:
+         - Zapis tabel wynikowych do plików.
 
 9. Using SparkSQL answer: how many table were created in each layer?
 
-   ***SparkSQL command and output***
+   Kod:
+   ```
+    from pyspark.sql import SparkSession
+
+    spark = SparkSession.builder\
+        .appName("TBD-TPC-DI-setup") \
+        .enableHiveSupport() \
+        .getOrCreate()
+    
+    layers = sorted(
+        d.namespace
+        for d in spark.sql('show databases').collect()
+    )
+    
+    print("Layer\tTables Number")
+    for layer in layers:
+        spark.sql(f'use {layer}')
+        tables_number = spark.sql('show tables').count()
+        print(f'{layer}\t{tables_number}')
+   ```
+   Wynik:
+
+   ![img.png](doc/figures/TableCounts.jpeg)
+    
 
 10. Add some 3 more [dbt tests](https://docs.getdbt.com/docs/build/tests) and explain what you are testing. ***Add new tests to your repository.***
 
-   ***Code and description of your tests***
+    1. Weryfikacja, czy wszystkie transakcje w tabeli fact_trade mają przypisane istniejące ID brokera z tabeli dim_broker:
+       ```
+       select *
+       from {{ ref('fact_trade') }}
+       where broker_id not in (select broker_id from {{ ref('dim_broker') }})
+       ```
+    2. Sprawdzenie, czy kolumna balance w tabeli fact_cash_balances zawiera tylko dodatnie wartości:
+       ```
+       select *
+       from {{ ref('fact_cash_balances') }}
+       where balance <= 0
+       ```
+    3. Testowanie, czy wszystkie transakcje w tabeli fact_cash_transactions mają przypisane istniejące ID konta z tabeli dim_account:
+       ```
+       select *
+       from {{ ref('fact_cash_transactions') }}
+       where account_id not in (select account_id from {{ ref('dim_account') }})
+       ```
 
 11. In main.tf update
    ```
